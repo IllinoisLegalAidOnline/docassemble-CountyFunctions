@@ -1,0 +1,174 @@
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - docassemble.ALToolbox:phone-number-validation.yml
+  - docassemble.ILAO:ilao-interview-framework.yml
+  - docassemble.ILAO:shared-basic-questions.yml
+---
+code: |
+  ilao_easy_form_title = "CountyFunctions"
+  ilao_easy_form_url = "https://www.illinoislegalaid.org/"
+  github_user = 'IllinoisLegalAidOnline'
+  github_repo_name = 'docassemble-CountyFunctions'
+---
+objects:
+  - test_person: ALIndividual
+  - court_list: ALCourtLoader.using(file_name='docassemble.ILAO:data/sources/il_courts.xlsx')
+---
+# interview order block
+mandatory: True
+code: |
+  test_person.address.address
+  in_state_test
+  if end_in_county(test_person.address.county) == False:
+    test_person.address.county = test_person.address.county + " County"
+  if is_illinois_county(test_person.address) == True:
+    if county_in_list(test_person.address.county) == False:
+      test_person.address.trial_court_index
+      if test_person.address.trial_court_index == "-1":
+        trial_court = court_list.as_court('trial_court', 15)
+      else:
+        trial_court = court_list.as_court('trial_court', test_person.address.trial_court_index)
+      test_person.address.county = trial_court.address.county + " County" 
+  current_status
+  get_docs_screen
+---
+question: |
+  After that business, the value of test_person.address.county is now ${test_person.address.county}. Isn't that just swell?
+fields:
+  - no label: current_status
+    datatype: yesnoradio
+---
+question: |
+  Is the county in the list of Illinois counties? ${county_in_list(test_person.address.county)}
+fields:
+  - no label: list_function_check
+    datatype: yesnoradio
+---
+question: |
+  Does the county value end in "county?" ${end_in_county(test_person.address.county)}
+fields:
+  - no label: county_function_check
+    datatype: yesnoradio
+---
+id: test person address
+question: |
+  Let's try out an address!
+fields:
+  - Street address: test_person.address.address
+    address autocomplete: True
+  - Address line 2: test_person.address.unit
+    required: False
+  - City: test_person.address.city
+  - State: test_person.address.state
+    code: |
+      states_list() 
+  - ZIP code: test_person.address.zip
+  - County: test_person.address.county
+---
+id: in state test
+question: |
+  Is test_person's address in Illinois? ${word(yesno(is_illinois_county(test_person.address)))}
+continue button field: in_state_test
+---
+code: |
+  def get_county_list(lowercase=False):
+    county_list = [*set(court_list._load_courts()['address_county'])]
+    county_list.sort()
+    return county_list
+---
+depends on:
+  - x.county
+generic object: ALAddress
+id: county dropdown
+question: |
+  What county is ${x.on_one_line()} in?
+subquestion: |
+  We could not find the county for ${ x.on_one_line(bare=True) } in the list of Illinois counties, but you can select it here.
+
+  ${ collapse_template(county_lookup_help) }
+fields:
+  - no label: x.trial_court_index
+    code: |
+      court_county_lookup()
+---   
+code: |
+  def court_county_lookup(lowercase=False):
+    all_court_counties = court_list._load_courts()['address_county'].items()
+    filtered_courts = [(-1, "cook")] if lowercase else [(-1, "Cook")]
+    for court in all_court_counties:
+      if court[1] != "Cook":
+        court_name = court[1].lower() if lowercase else court[1]
+        filtered_courts.append((court[0],court_name))
+    return sorted( filtered_courts, key=lambda y: y[1])
+---
+template: county_lookup_help
+subject: |
+  **How do I look up the county?**
+content: |  
+  You can use this **[City-to-County Finder](https://www.statsamerica.org/CityCountyFinder/)** to find the county.
+---
+code: |
+  def is_illinois_county(address_input):
+    if address_input.state == "IL":
+      return True
+    else:    
+      return False
+---
+code: |
+  def county_in_list(input_county):
+    county_name_storage = input_county.lower()
+    if county_name_storage.endswith (" county"):
+      county_name_storage = input_county.lower()[0:-7]
+    county_found_storage = False
+    for item in get_county_list():
+      if county_name_storage == str(item).lower():
+        county_found_storage = True
+    if county_found_storage == True:
+      return True
+    else:
+      return False
+---
+code: |
+  def end_in_county(input_county):
+    county_name_storage = input_county.lower()
+    if county_name_storage.endswith (" county"):
+      return True
+    else:
+      return False
+---
+code: |
+  def court_county_lookup(lowercase=False):
+    all_court_counties = court_list._load_courts()['address_county'].items()
+    filtered_courts = [(-1, "cook")] if lowercase else [(-1, "Cook")]
+    for court in all_court_counties:
+      if court[1] != "Cook":
+        court_name = court[1].lower() if lowercase else court[1]
+        filtered_courts.append((court[0],court_name))
+    return sorted( filtered_courts, key=lambda y: y[1])
+---
+code: |
+  def get_county_list(lowercase=False):
+    county_list = [*set(court_list._load_courts()['address_county'])]
+    county_list.sort()
+    return county_list
+---
+id: get docs screen
+event: get_docs_screen
+question: |
+  End Screen
+subquestion: |
+  Thank you for using ILAO Easy Forms!
+  
+  ${ action_button_html(url_action('review_answers'), label=':edit: Make changes', color='success', size="md") }
+---
+id: review screen
+event: review_answers
+question: |
+  Review screen
+subquestion: |
+  Edit your answers below.
+review: 
+  - Edit: test_person.address.county
+    button: |
+      **Call the address input page to set test_person.address.county:**
+      ${test_person.address.county}
