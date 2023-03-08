@@ -19,15 +19,9 @@ mandatory: True
 code: |
   test_person.address.address
   in_state_test
-  if end_in_county(test_person.address.county) == False:
-    test_person.address.county = test_person.address.county + " County"
   if is_illinois_county(test_person.address) == True:
     if county_in_list(test_person.address.county) == False:
       test_person.address.trial_court_index
-      if test_person.address.trial_court_index == "-1":
-        trial_court = court_list.as_court('trial_court', 15)
-      else:
-        trial_court = court_list.as_court('trial_court', test_person.address.trial_court_index)
       test_person.address.county = trial_court.address.county + " County" 
   current_status
   get_docs_screen
@@ -70,12 +64,6 @@ question: |
   Is test_person's address in Illinois? ${word(yesno(is_illinois_county(test_person.address)))}
 continue button field: in_state_test
 ---
-code: |
-  def get_county_list(lowercase=False):
-    county_list = [*set(court_list._load_courts()['address_county'])]
-    county_list.sort()
-    return county_list
----
 depends on:
   - x.county
 generic object: ALAddress
@@ -90,6 +78,11 @@ fields:
   - no label: x.trial_court_index
     code: |
       court_county_lookup()
+validation code: |
+  if x.trial_court_index == "-1":
+    trial_court = court_list.as_court('trial_court', 15)
+  else:
+    trial_court = court_list.as_court('trial_court', x.trial_court_index)
 ---   
 code: |
   def court_county_lookup(lowercase=False):
