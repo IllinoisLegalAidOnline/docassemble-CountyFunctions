@@ -18,31 +18,31 @@ objects:
 mandatory: True
 code: |
   test_person.address.address
-  in_state_test
+  #in_state_test
   if is_illinois_county(test_person.address) == True:
     if county_in_list(test_person.address.county) == False:
       test_person.address.trial_court_index
-      test_person.address.county = trial_court.address.county + " County" 
-  current_status
+      #county_dropdown_to_address
+  #current_status
   get_docs_screen
 ---
-question: |
-  After that business, the value of test_person.address.county is now ${test_person.address.county}. Isn't that just swell?
-fields:
-  - no label: current_status
-    datatype: yesnoradio
+#question: |
+  #After that business, the value of test_person.address.county is now ${test_person.address.county}. Isn't that just swell?
+#fields:
+  #- no label: current_status
+    #datatype: yesnoradio
 ---
-question: |
-  Is the county in the list of Illinois counties? ${county_in_list(test_person.address.county)}
-fields:
-  - no label: list_function_check
-    datatype: yesnoradio
+#question: |
+  #Is the county in the list of Illinois counties? ${county_in_list(test_person.address.county)}
+#fields:
+  #- no label: list_function_check
+    #datatype: yesnoradio
 ---
-question: |
-  Does the county value end in "county?" ${end_in_county(test_person.address.county)}
-fields:
-  - no label: county_function_check
-    datatype: yesnoradio
+#question: |
+  #Does the county value end in "county?" ${end_in_county(test_person.address.county)}
+#fields:
+  #- no label: county_function_check
+    #datatype: yesnoradio
 ---
 id: test person address
 question: |
@@ -59,10 +59,10 @@ fields:
   - ZIP code: test_person.address.zip
   - County: test_person.address.county
 ---
-id: in state test
-question: |
-  Is test_person's address in Illinois? ${word(yesno(is_illinois_county(test_person.address)))}
-continue button field: in_state_test
+#id: in state test
+#question: |
+  #Is test_person's address in Illinois? #${word(yesno(is_illinois_county(test_person.address)))}
+#continue button field: in_state_test
 ---
 depends on:
   - x.county
@@ -83,7 +83,14 @@ validation code: |
     trial_court = court_list.as_court('trial_court', 15)
   else:
     trial_court = court_list.as_court('trial_court', x.trial_court_index)
+  x.county = trial_court.address.county + " County" 
 ---   
+#depends on:
+  #- trial_court.address.county
+#code: |
+  #test_person.address.county = trial_court.address.county + " County" 
+  #county_dropdown_to_address = True
+---
 code: |
   def court_county_lookup(lowercase=False):
     all_court_counties = court_list._load_courts()['address_county'].items()
@@ -161,7 +168,7 @@ question: |
 subquestion: |
   Edit your answers below.
 review: 
-  - Edit: test_person.address.county
+  - Edit: test_person.address.address
     button: |
       **Call the address input page to set test_person.address.county:**
       ${test_person.address.county}
