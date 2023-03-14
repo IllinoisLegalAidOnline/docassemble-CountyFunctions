@@ -18,31 +18,8 @@ objects:
 mandatory: True
 code: |
   test_person.address.address
-  #in_state_test
-  if is_illinois_county(test_person.address) == True:
-    if county_in_list(test_person.address.county) == False:
-      test_person.address.trial_court_index
-      #county_dropdown_to_address
-  #current_status
+  test_person.address.county_correct
   get_docs_screen
----
-#question: |
-  #After that business, the value of test_person.address.county is now ${test_person.address.county}. Isn't that just swell?
-#fields:
-  #- no label: current_status
-    #datatype: yesnoradio
----
-#question: |
-  #Is the county in the list of Illinois counties? ${county_in_list(test_person.address.county)}
-#fields:
-  #- no label: list_function_check
-    #datatype: yesnoradio
----
-#question: |
-  #Does the county value end in "county?" ${end_in_county(test_person.address.county)}
-#fields:
-  #- no label: county_function_check
-    #datatype: yesnoradio
 ---
 id: test person address
 question: |
@@ -59,10 +36,17 @@ fields:
   - ZIP code: test_person.address.zip
   - County: test_person.address.county
 ---
-#id: in state test
-#question: |
-  #Is test_person's address in Illinois? #${word(yesno(is_illinois_county(test_person.address)))}
-#continue button field: in_state_test
+generic object: ALAddress
+code: |  
+  if is_illinois_county(x) == True:
+    if county_in_list(x.county) == False:
+      x.trial_court_index
+      x.county = trial_court.address.county + " County" 
+    else:
+      x.county = end_in_county(x.county)
+  else:
+    x.county = end_in_county(x.county)
+  x.county_correct = True
 ---
 depends on:
   - x.county
@@ -83,13 +67,7 @@ validation code: |
     trial_court = court_list.as_court('trial_court', 15)
   else:
     trial_court = court_list.as_court('trial_court', x.trial_court_index)
-  x.county = trial_court.address.county + " County" 
----   
-#depends on:
-  #- trial_court.address.county
-#code: |
-  #test_person.address.county = trial_court.address.county + " County" 
-  #county_dropdown_to_address = True
+  #x.county = trial_court.address.county + " County" 
 ---
 code: |
   def court_county_lookup(lowercase=False):
@@ -130,11 +108,10 @@ code: |
 ---
 code: |
   def end_in_county(input_county):
-    county_name_storage = input_county.lower()
-    if county_name_storage.endswith (" county"):
-      return True
+    if input_county.endswith (" county"):
+      return input_county
     else:
-      return False
+      return input_county + " County" 
 ---
 code: |
   def court_county_lookup(lowercase=False):
@@ -152,6 +129,8 @@ code: |
     county_list.sort()
     return county_list
 ---
+#add function append county
+---
 id: get docs screen
 event: get_docs_screen
 question: |
@@ -168,7 +147,11 @@ question: |
 subquestion: |
   Edit your answers below.
 review: 
-  - Edit: test_person.address.address
+  - label: Edit
+    fields:
+      - test_person.address.address
+      - recompute:
+        - test_person.address.county_correct
     button: |
       **Call the address input page to set test_person.address.county:**
       ${test_person.address.county}
