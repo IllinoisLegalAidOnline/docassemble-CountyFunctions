@@ -12,6 +12,7 @@ code: |
 ---
 objects:
   - test_person: ALIndividual
+  - another_person: ALIndividual
   - court_list: ALCourtLoader.using(file_name='docassemble.ILAO:data/sources/il_courts.xlsx')
 ---
 # interview order block
@@ -19,6 +20,8 @@ mandatory: True
 code: |
   test_person.address.address
   test_person.address.county_correct
+  another_person.address.address
+  another_person.address.county_correct
   get_docs_screen
 ---
 id: test person address
@@ -36,12 +39,27 @@ fields:
   - ZIP code: test_person.address.zip
   - County: test_person.address.county
 ---
+id: another person address
+question: |
+  Let's try out another address!
+fields:
+  - Street address: another_person.address.address
+    address autocomplete: True
+  - Address line 2: another_person.address.unit
+    required: False
+  - City: another_person.address.city
+  - State: another_person.address.state
+    code: |
+      states_list() 
+  - ZIP code: another_person.address.zip
+  - County: another_person.address.county
+---
 generic object: ALAddress
 code: |  
   if is_illinois_county(x) == True:
     if county_in_list(x.county) == False:
       x.trial_court_index
-      x.county = trial_court.address.county + " County" 
+      x.county = end_in_county(x.trial_court_index)
     else:
       x.county = end_in_county(x.county)
   else:
@@ -61,12 +79,12 @@ subquestion: |
 fields:
   - no label: x.trial_court_index
     code: |
-      court_county_lookup()
-validation code: |
-  if x.trial_court_index == "-1":
-    trial_court = court_list.as_court('trial_court', 15)
-  else:
-    trial_court = court_list.as_court('trial_court', x.trial_court_index)
+      all_illinois_counties
+#validation code: |
+  #if x.trial_court_index == "-1":
+    #trial_court = court_list.as_court('trial_court', 15)
+  #else:
+    #trial_court = court_list.as_court('trial_court', x.trial_court_index)
   #x.county = trial_court.address.county + " County" 
 ---
 code: |
@@ -114,6 +132,9 @@ code: |
       return input_county + " County" 
 ---
 code: |
+  all_illinois_counties = ["Adams", "Alexander", "Bond", "Boone", "Brown", "Bureau", "Calhoun", "Carroll", "Cass", "Champaign", "Christian", "Clark", "Clay", "Clinton", "Coles", "Cook", "Crawford", "Cumberland", "DeKalb", "DeWitt", "Douglas", "DuPage", "Edgar", "Edwards", "Effingham", "Fayette", "Ford", "Franklin", "Fulton", "Gallatin", "Greene", "Grundy", "Hamilton", "Hancock", "Hardin", "Henderson", "Henry", "Iroquois", "Jackson", "Jasper", "Jefferson", "Jersey", "Jo Daviess", "Johnson", "Kane", "Kankakee", "Kendall", "Knox", "Lake", "LaSalle", "Lawrence", "Lee", "Livingston", "Logan", "Macon," "Macoupin", "Madison", "Marion", "Marshall", "Mason", "Massac", "McDonough", "McHenry", "McLean", "Menard", "Mercer", "Monroe", "Montgomery", "Morgan", "Moultrie", "Ogle", "Peoria", "Perry", "Piatt", "Pike", "Pope", "Pulaski", "Putnam", "Randolph", "Richland", "Rock Island", "Saline", "Sangamon", "Schuyler", "Scott", "Shelby", "St. Clair", "Stark", "Stephenson", "Tazewell", "Union", "Vermilion", "Wabash", "Warren", "Washington", "Wayne", "White", "Whiteside", "Will", "Williamson", "Winnebago", "Woodford"]
+---
+code: |
   def court_county_lookup(lowercase=False):
     all_court_counties = court_list._load_courts()['address_county'].items()
     filtered_courts = [(-1, "cook")] if lowercase else [(-1, "Cook")]
@@ -138,6 +159,10 @@ question: |
 subquestion: |
   Thank you for using ILAO Easy Forms!
   
+  The address is ${test_person.address.on_one_line()}.
+  
+  The other address is ${another_person.address.on_one_line()}
+  
   ${ action_button_html(url_action('review_answers'), label=':edit: Make changes', color='success', size="md") }
 ---
 id: review screen
@@ -155,3 +180,11 @@ review:
     button: |
       **Call the address input page to set test_person.address.county:**
       ${test_person.address.county}
+  - label: Edit
+    fields:
+      - another_person.address.address
+      - recompute:
+        - another_person.address.county_correct
+    button: |
+      **Call the address input page to set another_person.address.county:**
+      ${another_person.address.county}
