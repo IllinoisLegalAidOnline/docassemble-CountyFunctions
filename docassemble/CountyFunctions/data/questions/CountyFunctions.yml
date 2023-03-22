@@ -19,9 +19,9 @@ objects:
 mandatory: True
 code: |
   test_person.address.address
-  test_person.address.county_correct
+  test_person.address.county_correct_no_court
   another_person.address.address
-  another_person.address.county_correct
+  another_person.address.county_correct_no_court
   get_docs_screen
 ---
 id: test person address
@@ -57,19 +57,46 @@ fields:
 generic object: ALAddress
 code: |  
   if is_illinois_county(x) == True:
-    if county_in_list(x.county) == False:
+    if county_in_list_no_court(x.county) == False:
+      x.county_dropdown
+      x.county = end_in_county(x.county_dropdown)
+    else:
+      x.county = end_in_county(x.county)
+  else:
+    x.county = end_in_county(x.county)
+  x.county_correct_no_court = True
+---
+generic object: ALAddress
+code: |  
+  if is_illinois_county(x) == True:
+    if county_in_list_with_court(x.county) == False:
       x.trial_court_index
       x.county = end_in_county(x.trial_court_index)
     else:
       x.county = end_in_county(x.county)
   else:
     x.county = end_in_county(x.county)
-  x.county_correct = True
+  x.county_correct_with_court = True
 ---
 depends on:
   - x.county
 generic object: ALAddress
-id: county dropdown
+id: county dropdown no court
+question: |
+  What county is ${x.on_one_line()} in?
+subquestion: |
+  We could not find the county for ${ x.on_one_line(bare=True) } in the list of Illinois counties, but you can select it here.
+
+  ${ collapse_template(county_lookup_help) }
+fields:
+  - no label: x.county_dropdown
+    code: |
+      all_illinois_counties
+---
+depends on:
+  - x.county
+generic object: ALAddress
+id: county dropdown with court
 question: |
   What county is ${x.on_one_line()} in?
 subquestion: |
@@ -79,13 +106,13 @@ subquestion: |
 fields:
   - no label: x.trial_court_index
     code: |
-      all_illinois_counties
-#validation code: |
-  #if x.trial_court_index == "-1":
-    #trial_court = court_list.as_court('trial_court', 15)
-  #else:
-    #trial_court = court_list.as_court('trial_court', x.trial_court_index)
-  #x.county = trial_court.address.county + " County" 
+      court_county_lookup()
+validation code: |
+  if x.trial_court_index == "-1":
+    trial_court = court_list.as_court('trial_court', 15)
+  else:
+    trial_court = court_list.as_court('trial_court', x.trial_court_index)
+  x.county = trial_court.address.county + " County" 
 ---
 code: |
   def court_county_lookup(lowercase=False):
@@ -111,12 +138,26 @@ code: |
       return False
 ---
 code: |
-  def county_in_list(input_county):
+  def county_in_list_with_court(input_county):
     county_name_storage = input_county.lower()
     if county_name_storage.endswith (" county"):
       county_name_storage = input_county.lower()[0:-7]
     county_found_storage = False
     for item in get_county_list():
+      if county_name_storage == str(item).lower():
+        county_found_storage = True
+    if county_found_storage == True:
+      return True
+    else:
+      return False
+---
+code: |
+  def county_in_list_no_court(input_county):
+    county_name_storage = input_county.lower()
+    if county_name_storage.endswith (" county"):
+      county_name_storage = input_county.lower()[0:-7]
+    county_found_storage = False
+    for item in all_illinois_counties:
       if county_name_storage == str(item).lower():
         county_found_storage = True
     if county_found_storage == True:
@@ -150,7 +191,6 @@ code: |
     county_list.sort()
     return county_list
 ---
-#add function append county
 ---
 id: get docs screen
 event: get_docs_screen
@@ -161,10 +201,13 @@ subquestion: |
   
   The address is ${test_person.address.on_one_line()}.
   
-  The other address is ${another_person.address.on_one_line()}
   
   ${ action_button_html(url_action('review_answers'), label=':edit: Make changes', color='success', size="md") }
 ---
+  #The other address is ${another_person.address.on_one_line()}
+
+---
+
 id: review screen
 event: review_answers
 question: |
@@ -176,7 +219,7 @@ review:
     fields:
       - test_person.address.address
       - recompute:
-        - test_person.address.county_correct
+        - test_person.address.county_correct_no_court
     button: |
       **Call the address input page to set test_person.address.county:**
       ${test_person.address.county}
@@ -184,7 +227,7 @@ review:
     fields:
       - another_person.address.address
       - recompute:
-        - another_person.address.county_correct
+        - another_person.address.county_correct_no_court
     button: |
       **Call the address input page to set another_person.address.county:**
       ${another_person.address.county}
