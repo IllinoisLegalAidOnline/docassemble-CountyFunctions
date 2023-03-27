@@ -13,12 +13,15 @@ code: |
 objects:
   - test_person: ALIndividual
   - court_list: ALCourtLoader.using(file_name='docassemble.ILAO:data/sources/il_courts.xlsx')
+  - test_address: ALAddress
 ---
 # interview order block
 mandatory: True
 code: |
   test_person.address.address
   test_person.address.county_correct
+  test_address.address
+  test_address.county_correct
   get_docs_screen
 ---
 id: test person address
@@ -35,6 +38,21 @@ fields:
       states_list() 
   - ZIP code: test_person.address.zip
   - County: test_person.address.county
+---
+id: test address
+question: |
+  Let's try out another address!
+fields:
+  - Street address: test_address.address
+    address autocomplete: True
+  - Address line 2: test_address.unit
+    required: False
+  - City: test_address.city
+  - State: test_address.state
+    code: |
+      states_list() 
+  - ZIP code: test_address.zip
+  - County: test_address.county
 ---
 generic object: ALAddress
 code: |  
@@ -108,7 +126,7 @@ code: |
 ---
 code: |
   def end_in_county(input_county):
-    if input_county.endswith (" county"):
+    if input_county.lower().endswith(" county"):
       return input_county
     else:
       return input_county + " County" 
@@ -136,6 +154,15 @@ event: get_docs_screen
 question: |
   End Screen
 subquestion: |
+
+  ALIndividual object address: ${ test_person.address.on_one_line(bare=True) } 
+  
+  ALIndividual object county: ${ test_person.address.county }
+
+  ALAddress object address: ${ test_address.on_one_line(bare=True) } 
+  
+  ALAddress object county: ${ test_address.county }
+
   Thank you for using ILAO Easy Forms!
   
   ${ action_button_html(url_action('review_answers'), label=':edit: Make changes', color='success', size="md") }
@@ -153,5 +180,13 @@ review:
       - recompute:
         - test_person.address.county_correct
     button: |
-      **Call the address input page to set test_person.address.county:**
+      **test_person county:**
       ${test_person.address.county}
+  - label: Edit
+    fields:
+      - test_address.address
+      - recompute:
+        - test_address.county_correct
+    button: |
+      **test_address county:**
+      ${test_address.county}      
