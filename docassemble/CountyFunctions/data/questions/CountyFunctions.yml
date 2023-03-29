@@ -67,7 +67,6 @@ validation code: |
     trial_court = court_list.as_court('trial_court', 15)
   else:
     trial_court = court_list.as_court('trial_court', x.trial_court_index)
-  #x.county = trial_court.address.county + " County" 
 ---
 code: |
   def court_county_lookup(lowercase=False):
@@ -128,8 +127,6 @@ code: |
     county_list = [*set(court_list._load_courts()['address_county'])]
     county_list.sort()
     return county_list
----
-#add function append county
 ---
 id: get docs screen
 event: get_docs_screen
