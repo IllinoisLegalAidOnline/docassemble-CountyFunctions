@@ -19,6 +19,8 @@ mandatory: True
 code: |
   test_person.address.address
   test_person.address.county_correct
+  if check_for_cook(test_person.address) == True:
+    test_person.address.cook_district
   get_docs_screen
 ---
 id: test person address
@@ -41,11 +43,15 @@ code: |
   if is_illinois_county(x) == True:
     if county_in_list(x.county) == False:
       x.trial_court_index
+      #if x.trial_court_index == -1:
+        #x.cook_district
       x.county = trial_court.address.county + " County" 
     else:
       x.county = end_in_county(x.county)
   else:
     x.county = end_in_county(x.county)
+    #if x.county.lower() == "cook county":
+      #x.cook_district
   x.county_correct = True
 ---
 depends on:
@@ -128,6 +134,15 @@ code: |
     county_list.sort()
     return county_list
 ---
+code: |
+  def check_for_cook(input_address):
+    if input_address.county.lower() == "cook":
+      return True
+    elif input_address.county.lower() == "cook county":
+      return True
+    else:
+      return False
+---
 id: get docs screen
 event: get_docs_screen
 question: |
@@ -135,8 +150,39 @@ question: |
 subquestion: |
   Thank you for using ILAO Easy Forms!
   
+  Cook district variable value: ${test_person.address.cook_district}
+  
   ${ action_button_html(url_action('review_answers'), label=':edit: Make changes', color='success', size="md") }
 ---
+depends on:
+  - x.trial_court_index
+generic object: ALAddress
+id: Cook County district
+question: |
+  In which Cook County courthouse is your case?
+subquestion: |
+  This information should be found near the top of your court papers.
+
+  ${ collapse_template(cook_district_help) }  
+field: x.cook_district
+choices:
+  - First Municipal District, Daley Center, 50 W. Washington Street, Chicago: 15
+  - Second Municipal District, 5600 Old Orchard Road, Skokie: 16
+  - Third Municipal District, 2121 Euclid Avenue, Rolling Meadows: 17
+  - Fourth Municipal District, 1500 Maybrook Drive, Maywood: 18
+  - Fifth Municipal District, 10220 S. 76th Avenue, Bridgeview: 19
+  - Sixth Municipal District, 16501 South Kedzie Parkway, Markham: 20
+  - Domestic Violence Court, 555 W. Harrison Street, Chicago: 21
+  - George N. Leighton Criminal Court Building, 2600 S. California Avenue, Chicago: 22
+  - Juvenile Center, 2245 West Ogden Avenue, Chicago: 23
+---
+template: cook_district_help
+subject: |
+  **What if I am not sure?**
+content: |  
+  Visit **[Illinois Court Help](https://www.ilcourthelp.gov/)**, or you can call or text (833) 411-1121 for assistance.
+---
+
 id: review screen
 event: review_answers
 question: |
@@ -152,3 +198,28 @@ review:
     button: |
       **Call the address input page to set test_person.address.county:**
       ${test_person.address.county}
+  - label: Edit
+    fields:
+      - test_person.address.cook_district
+    button: |
+      **Cook County courthouse:**
+      % if test_person.address.cook_district == "15":
+      ${ "Daley Center, 50 W. Washington Street, Chicago" }
+      % elif test_person.address.cook_district == "16":
+      ${ "Second Municipal District, 5600 Old Orchard Road, Skokie" }
+      % elif test_person.address.cook_district == "17":
+      ${ "Third Municipal District, 2121 Euclid Avenue, Rolling Meadows" }
+      % elif test_person.address.cook_district == "18":
+      ${ "Fourth Municipal District, 1500 Maybrook Drive, Maywood" }
+      % elif test_person.address.cook_district == "19":
+      ${ "Fifth Municipal District, 10220 S. 76th Avenue, Bridgeview" }
+      % elif test_person.address.cook_district == "20":
+      ${ "Sixth Municipal District, 16501 South Kedzie Parkway, Markham" }
+      % elif test_person.address.cook_district == "21":
+      ${ "Domestic Violence Court, 555 W. Harrison Street, Chicago" }
+      % elif test_person.address.cook_district == "22":
+      ${ "George N. Leighton Criminal Court Building, 2600 S. California Avenue, Chicago" }
+      % else:
+      ${ "Juvenile Center, 2245 West Ogden Avenue, Chicago" }
+      % endif      
+    show if: test_person.address.county.lower() == "cook county"
